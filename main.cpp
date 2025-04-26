@@ -46,45 +46,65 @@ string ColorToString(ChocolateColorPack color) {
 
 enum class EatingMannerEnum : int
 {
-  chocBreak,
-  chompChunk,
-  meltInMouth,
-  chocoShred,
-  chocCrush,
+  chocBreak = 1,
+  chompChunk = 2,
+  meltInMouth = 3,
+  chocoShred = 4,
+  chocCrush = 5,
 
-  None
+  None = 0
 };
+
+/*
+string MannerToString(EatingMannerEnum manner) {
+    switch(color) {
+        case EatingMannerEnum::chocBreak: return "chocBreak";
+        case EatingMannerEnum::chompChunk: return "chompChunk";
+        case EatingMannerEnum::meltInMouth: return "meltInMouth";
+        case EatingMannerEnum::chocoShred: return "chocoShred";
+        case EatingMannerEnum::chocCrush: return "chocCrush";
+
+        default: return "Unknown";
+    }
+}
+*/
 
 class EatingStrategy
 {
 public:
   virtual ~EatingStrategy() {}
   virtual void eat() = 0;
+  virtual EatingMannerEnum GetMannerEnum() const = 0;
 };
 
 class ChocBreakStrategy : public EatingStrategy
 {
   void eat() { cout << "Breaking chocolate into perfect slices..."; }
+  EatingMannerEnum GetMannerEnum() const override { return EatingMannerEnum::chocBreak; }
 };
 
 class ChompChunkStrategy : public EatingStrategy
 {
   void eat() { cout << "Taking a bold whole bite of chocolate..."; }
+  EatingMannerEnum GetMannerEnum() const override { return EatingMannerEnum::chompChunk; }
 };
 
 class MeltInMouthStrategy : public EatingStrategy
 {
   void eat() { cout << "Letting chocolate melt slowly on the tongue..."; }
+  EatingMannerEnum GetMannerEnum() const override { return EatingMannerEnum::meltInMouth; }
 };
 
 class ChocoShredStrategy : public EatingStrategy
 {
   void eat() { cout << "Shredding chocolate into delicate flakes..."; }
+  EatingMannerEnum GetMannerEnum() const override { return EatingMannerEnum::chocoShred; }
 };
 
 class ChocCrushStrategy : public EatingStrategy
 {
   void eat() { cout << "Crushing chocolate into tiny fragments..."; }
+  EatingMannerEnum GetMannerEnum() const override { return EatingMannerEnum::chocCrush; }
 };
 
 // Фабричный метод для создания стратегий
@@ -101,6 +121,31 @@ EatingStrategy* CreateEatingStrategy(EatingMannerEnum eatingManner)
         default: return nullptr;
     }
 }
+
+
+
+//фабричный метод создания класса
+enum class ChocolateType : int
+{
+    Milka = 1,
+    AlpenGold = 2,
+    RitterSport = 3,
+
+    Undefined = 0
+};
+
+string TypeToString(ChocolateType type) {
+    switch(type) {
+        case ChocolateType::Milka: return "Milka";
+        case ChocolateType::AlpenGold: return "AlpenGold";
+        case ChocolateType::RitterSport: return "RitterSport";
+        default: return "Unknown";
+    }
+}
+
+
+
+
 
 
 class Chocolate{
@@ -140,6 +185,7 @@ private:
     }
 
 
+
 protected:
     bool IsMelting;
 
@@ -162,11 +208,13 @@ public:
     bool IsMelt() const {return IsMelting;}
 
 
+    virtual ChocolateType GetType() const = 0;
 
     virtual void describe()
     {
-       cout << "Chocolate taste: " << GetTaste() << ";  " <<
-                             "Color pack: " << GetColorPack() << endl;
+       cout << "Chocolate taste: " << GetTaste() << ";  "
+            << "Chocolate name: " << TypeToString(GetType())
+            << ";  " << "Color pack: " << GetColorPack() << endl;
     }
 
     void eat()
@@ -179,6 +227,12 @@ public:
     };
     virtual void melt () {cout << "Is melt?:" << IsMelting << endl;}
     void SetEatingManner(EatingStrategy *eatingManner) { EatingManner = eatingManner; }
+    EatingMannerEnum GetMannerEnum() const {
+        if (EatingManner != nullptr) {
+            return EatingManner->GetMannerEnum();
+        }
+        return EatingMannerEnum::None;
+    }
 };
 
 
@@ -194,6 +248,7 @@ public:
 
     void describe() override {Chocolate::describe();}
     void melt() {cout << "Is melt?: " << IsMelting << endl;}
+    ChocolateType GetType() const override {return ChocolateType::Milka; }
 
 };
 
@@ -217,6 +272,7 @@ public:
     void melt() {
         IsMelting = true;
         cout << "Is melt?: " << IsMelting << endl;}
+    ChocolateType GetType() const override { return ChocolateType::AlpenGold; }
 };
 
 AlpenGold::AlpenGold() : Chocolate(ChocolateTaste::White, ChocolateColorPack::Blue, 50, 75.0)
@@ -236,6 +292,7 @@ public:
         Chocolate::describe();
     }
     void melt() {cout << "Is melt?: " << IsMelting << endl;}
+    ChocolateType GetType() const override { return ChocolateType::RitterSport; }
 };
 
 RitterSport::RitterSport() : Chocolate(ChocolateTaste::Milky, ChocolateColorPack::White, 1000, 100.0)
@@ -246,18 +303,7 @@ RitterSport::RitterSport() : Chocolate(ChocolateTaste::Milky, ChocolateColorPack
 
 
 
-
-//фабричный метод создания класса
-enum class ChocolateType : int
-{
-    Milka = 1,
-    AlpenGold = 2,
-    RitterSport = 3,
-
-    Undefined = 0
-};
-
-Chocolate *CreateChocolate(ChocolateType type)
+Chocolate *CreateChocolate(ChocolateType type, EatingMannerEnum manner)
 {
     Chocolate *newChocolate = nullptr;
 
@@ -274,8 +320,18 @@ Chocolate *CreateChocolate(ChocolateType type)
         newChocolate = new RitterSport;
     }
 
+    if(newChocolate)
+    {
+        newChocolate->SetEatingManner(CreateEatingStrategy(manner));
+    }
+
+
     return newChocolate;
 }
+
+
+
+
 
 void AllItems(Iterator<Chocolate*> *iterator)
 {
@@ -378,9 +434,29 @@ public:
     }
 };
 
+// Декоратор итератора для выделения шоколодок по типу сьедания
 
+class ChocolateMannerDecorator : public IteratorDecorator<class Chocolate*> {
+private:
+    EatingMannerEnum TargetManner;
 
+public:
+    ChocolateMannerDecorator(Iterator<Chocolate*> *it, EatingMannerEnum manner)
+    : IteratorDecorator<Chocolate*>(it), TargetManner(manner) {}
 
+    void First() {
+        It->First();
+        while(!It->IsDone() && It->GetCurrent()->GetMannerEnum() != TargetManner) {
+            It->Next();
+        }
+    }
+
+    void Next() {
+        do {
+            It->Next();
+        } while(!It->IsDone() && It->GetCurrent()->GetMannerEnum() != TargetManner);
+    }
+};
 
 
 // Функция, позволяющая съесть любые шоко из любого контейнера
@@ -435,6 +511,19 @@ void EatEmAllNotMelt(Iterator<Chocolate*> *it)
     }
 }
 
+// Функция, позволяющая съесть любые шоко, которые таят на языке :)
+void EatEmAllMannerMeltInMouth(Iterator<Chocolate*> *it)
+{
+    for(it->First(); !it->IsDone(); it->Next())
+    {
+        Chocolate *currentChocolate = it->GetCurrent();
+        if(currentChocolate->GetMannerEnum() != EatingMannerEnum::meltInMouth) continue;
+
+        currentChocolate->describe();
+        currentChocolate->eat();
+    }
+}
+
 
 
 
@@ -447,8 +536,12 @@ int main()
     for (size_t i=0;i<N;i++)
     {
         int number = rand()%3+1;
+        int number_eat = rand()%5+1;
+
         ChocolateType choco_type = static_cast<ChocolateType>(number);
-        Chocolate *choco1 = CreateChocolate(choco_type);
+        EatingMannerEnum eat_manner = static_cast<EatingMannerEnum>(number_eat);
+
+        Chocolate *choco1 = CreateChocolate(choco_type, eat_manner);
         chocolateStack.Push(choco1);
     }
 
@@ -478,14 +571,24 @@ int main()
     EatEmAll(purplemeltIt);
     delete purplemeltIt;
 
+    // Обход всех шоколадок, которые скоро растопят
+    cout << endl << "A roundup of all the chocolates that are about to be melted:" << endl;
+    Iterator<Chocolate*> *mannerIt = new ChocolateMannerDecorator(chocolateStack.GetIterator(), EatingMannerEnum::meltInMouth);
+    EatEmAllMannerMeltInMouth(mannerIt);
+    delete mannerIt;
+
     // демонстрация адаптера
 
     vector<Chocolate*> chocoVector;
     for(size_t i=0; i<N; i++)
     {
         int choco_num = rand()%3+1;
+        int number_eat = rand()%5+1;
+
         ChocolateType choco_type = static_cast<ChocolateType>(choco_num);
-        Chocolate *newChocolate = CreateChocolate(choco_type);
+        EatingMannerEnum eat_manner = static_cast<EatingMannerEnum>(number_eat);
+
+        Chocolate *newChocolate = CreateChocolate(choco_type, eat_manner);
         chocoVector.push_back(newChocolate);
     }
 
