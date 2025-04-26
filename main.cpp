@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
-#include "PatternT.h"
+#include "Pattern.h"
 
 using namespace std;
 
@@ -42,6 +42,66 @@ string ColorToString(ChocolateColorPack color) {
     }
 }
 
+//реализация Стратегии
+
+enum class EatingMannerEnum : int
+{
+  chocBreak,
+  chompChunk,
+  meltInMouth,
+  chocoShred,
+  chocCrush,
+
+  None
+};
+
+class EatingStrategy
+{
+public:
+  virtual ~EatingStrategy() {}
+  virtual void eat() = 0;
+};
+
+class ChocBreakStrategy : public EatingStrategy
+{
+  void eat() { cout << "Breaking chocolate into perfect slices..."; }
+};
+
+class ChompChunkStrategy : public EatingStrategy
+{
+  void eat() { cout << "Taking a bold whole bite of chocolate..."; }
+};
+
+class MeltInMouthStrategy : public EatingStrategy
+{
+  void eat() { cout << "Letting chocolate melt slowly on the tongue..."; }
+};
+
+class ChocoShredStrategy : public EatingStrategy
+{
+  void eat() { cout << "Shredding chocolate into delicate flakes..."; }
+};
+
+class ChocCrushStrategy : public EatingStrategy
+{
+  void eat() { cout << "Crushing chocolate into tiny fragments..."; }
+};
+
+// Фабричный метод для создания стратегий
+EatingStrategy* CreateEatingStrategy(EatingMannerEnum eatingManner)
+{
+    switch(eatingManner)
+    {
+        case EatingMannerEnum::chocBreak: return new ChocBreakStrategy();
+        case EatingMannerEnum::chompChunk: return new ChompChunkStrategy();
+        case EatingMannerEnum::meltInMouth: return new MeltInMouthStrategy();
+        case EatingMannerEnum::chocoShred: return new ChocoShredStrategy();
+        case EatingMannerEnum::chocCrush: return new ChocCrushStrategy();
+
+        default: return nullptr;
+    }
+}
+
 
 class Chocolate{
 private:
@@ -50,15 +110,45 @@ private:
     double weight;
     ChocolateColorPack ColorPack;
 
+    EatingStrategy *EatingManner;
+
+    void DoEatUsingStrategy()
+    {
+      if(EatingManner == nullptr)
+      {
+        // Способ съедания не задан, ничего не делаем
+        cout << "Do nothing!";
+        return;
+      }
+      else
+      {
+        // Съесть заданным способом
+        EatingManner->eat();
+      }
+    }
+
+    void DetectMeltOrNot()
+    {
+      if(IsMelt())
+      {
+          cout << " Type: Melting";
+      }
+      else
+      {
+          cout << " Type: Perfect";
+      }
+    }
+
+
 protected:
     bool IsMelting;
 
 public:
     Chocolate(ChocolateTaste taste, ChocolateColorPack colorPack, int price, double weight)
-    : Taste(taste), ColorPack(colorPack), price(price), weight(weight), IsMelting(false){
+    : Taste(taste), ColorPack(colorPack), price(price), weight(weight), IsMelting(false), EatingManner(nullptr){
         IsMelting = static_cast<bool>(rand()%2);
     }
-    virtual ~Chocolate(){}
+    virtual ~Chocolate(){if(EatingManner != nullptr) delete EatingManner;}
 
     string GetTaste() const { return TasteToString(Taste); }
     //ChocolateTaste GetTaste() const {return Taste; }
@@ -71,27 +161,24 @@ public:
 
     bool IsMelt() const {return IsMelting;}
 
-    virtual void eat()
-    {
-        if(IsMelt())
-        {
-            cout << "Eating melting chocolate ... " << endl;
-        }
-        else
-        {
-            cout << "Eating NOT melting fruit... " << endl;
-        }
-    };
+
 
     virtual void describe()
     {
        cout << "Chocolate taste: " << GetTaste() << ";  " <<
-                             "Weight: " << weight << ";  " <<
-                             "Price: " << price << ";  " <<
-                             "Color pack: " << GetColorPack() << " MELTS: ";
+                             "Color pack: " << GetColorPack() << endl;
     }
 
+    void eat()
+    {   DoEatUsingStrategy();
+
+        DetectMeltOrNot();
+
+        cout << endl;
+
+    };
     virtual void melt () {cout << "Is melt?:" << IsMelting << endl;}
+    void SetEatingManner(EatingStrategy *eatingManner) { EatingManner = eatingManner; }
 };
 
 
@@ -103,39 +190,26 @@ class Milka : public Chocolate
 {
 public:
     Milka();
-    ~Milka();
+    ~Milka() {};
 
-    void eat()
-    {
-        //cout << "They ate it(" << endl;
-        Chocolate::eat();
-    };
+    void describe() override {Chocolate::describe();}
+    void melt() {cout << "Is melt?: " << IsMelting << endl;}
 
-    void describe() override
-    {
-        Chocolate::describe();
-    }
-    void melt() {
-        cout << "Is melt?: " << IsMelting << endl;}
 };
 
 Milka::Milka() : Chocolate(ChocolateTaste::Dark, ChocolateColorPack::Purple, 70, 75.0)
-{}
+{
+    SetEatingManner(CreateEatingStrategy(EatingMannerEnum::chocBreak));
+}
 
-Milka::~Milka()
-{}
 
 
 class AlpenGold : public Chocolate
 {
 public:
     AlpenGold();
-    ~AlpenGold();
+    ~AlpenGold(){};
 
-    void eat(){
-        //cout << "We left 1 piece :)" << endl;
-        Chocolate::eat();
-    };
     void describe() override
     {
         Chocolate::describe();
@@ -146,22 +220,17 @@ public:
 };
 
 AlpenGold::AlpenGold() : Chocolate(ChocolateTaste::White, ChocolateColorPack::Blue, 50, 75.0)
-{}
+{
+    SetEatingManner(CreateEatingStrategy(EatingMannerEnum::chompChunk));
+}
 
-AlpenGold::~AlpenGold()
-{}
 
 class RitterSport : public Chocolate
 {
 public:
     RitterSport();
-    ~RitterSport();
+    ~RitterSport(){};
 
-    void eat(){
-        //cout << "They even ate the packaging" << endl;
-        Chocolate::eat();
-
-    };
     void describe() override
     {
         Chocolate::describe();
@@ -170,10 +239,10 @@ public:
 };
 
 RitterSport::RitterSport() : Chocolate(ChocolateTaste::Milky, ChocolateColorPack::White, 1000, 100.0)
-{}
+{
+    SetEatingManner(CreateEatingStrategy(EatingMannerEnum::meltInMouth));
+}
 
-RitterSport::~RitterSport()
-{}
 
 
 
